@@ -15,6 +15,10 @@ import (
 type Request events.APIGatewayProxyRequest
 type Response events.APIGatewayProxyResponse
 
+type DynamoDBService interface {
+	GetItem(ctx context.Context, id string) (*db.Item, error)
+}
+
 func HandleRequest(ctx context.Context, request Request) (Response, error) {
 	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
@@ -25,7 +29,7 @@ func HandleRequest(ctx context.Context, request Request) (Response, error) {
 	return HandleRequestWithService(ctx, request, dynamoService)
 }
 
-func HandleRequestWithService(ctx context.Context, request Request, dynamoService *db.DynamoDBService) (Response, error) {
+func HandleRequestWithService(ctx context.Context, request Request, dynamoService DynamoDBService) (Response, error) {
 	item, err := dynamoService.GetItem(ctx, request.PathParameters["id"])
 	if err != nil {
 		return handleError(err)
