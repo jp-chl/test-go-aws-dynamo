@@ -11,6 +11,14 @@ service: test-aws-go
 # Check out our docs for more details
 frameworkVersion: '3'
 
+plugins:
+  - serverless-prune-plugin
+
+custom:
+  prune:
+    automatic: true
+    number: 1
+
 provider:
   name: aws
   runtime: go1.x
