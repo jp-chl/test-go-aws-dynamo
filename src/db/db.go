@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
@@ -15,14 +14,21 @@ type Item struct {
 	Name string `json:"name"`
 }
 
-func GetItem(ctx context.Context, id string) (*Item, error) {
-	cfg, err := config.LoadDefaultConfig(ctx)
-	if err != nil {
-		return nil, err
+type DynamoDBOperations interface {
+	GetItem(ctx context.Context, params *dynamodb.GetItemInput, optFns ...func(*dynamodb.Options)) (*dynamodb.GetItemOutput, error)
+}
+
+type DynamoDBService struct {
+	Client DynamoDBOperations
+}
+
+func NewDynamoDBService(client DynamoDBOperations) *DynamoDBService {
+	return &DynamoDBService{
+		Client: client,
 	}
+}
 
-	client := dynamodb.NewFromConfig(cfg)
-
+func (d *DynamoDBService) GetItem(ctx context.Context, id string) (*Item, error) {
 	av, err := attributevalue.Marshal(id)
 	if err != nil {
 		return nil, err
@@ -35,7 +41,7 @@ func GetItem(ctx context.Context, id string) (*Item, error) {
 		},
 	}
 
-	resp, err := client.GetItem(ctx, input)
+	resp, err := d.Client.GetItem(ctx, input)
 	if err != nil {
 		return nil, err
 	}

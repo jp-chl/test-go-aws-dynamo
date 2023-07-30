@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/jp-chl/test-go-aws-dynamo/src/db"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -14,7 +16,17 @@ type Request events.APIGatewayProxyRequest
 type Response events.APIGatewayProxyResponse
 
 func HandleRequest(ctx context.Context, request Request) (Response, error) {
-	item, err := db.GetItem(ctx, request.PathParameters["id"])
+	cfg, err := config.LoadDefaultConfig(ctx)
+	if err != nil {
+		return handleError(err)
+	}
+	client := dynamodb.NewFromConfig(cfg)
+	dynamoService := db.NewDynamoDBService(client)
+	return HandleRequestWithService(ctx, request, dynamoService)
+}
+
+func HandleRequestWithService(ctx context.Context, request Request, dynamoService *db.DynamoDBService) (Response, error) {
+	item, err := dynamoService.GetItem(ctx, request.PathParameters["id"])
 	if err != nil {
 		return handleError(err)
 	}
