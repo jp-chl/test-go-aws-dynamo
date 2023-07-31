@@ -4,50 +4,61 @@ import (
 	"context"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
-
-type Item struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
-}
 
 type DynamoDBOperations interface {
 	GetItem(ctx context.Context, params *dynamodb.GetItemInput, optFns ...func(*dynamodb.Options)) (*dynamodb.GetItemOutput, error)
 }
 
-type DynamoDBService struct {
-	Client DynamoDBOperations
+type AttributeMarshaler interface {
+	Marshal(interface{}) (types.AttributeValue, error)
 }
 
-func NewDynamoDBService(client DynamoDBOperations) *DynamoDBService {
+type AttributeUnmarshaler interface {
+	UnmarshalMap(map[string]types.AttributeValue, interface{}) error
+}
+
+type DynamoDBService struct {
+	client      DynamoDBOperations
+	marshaler   AttributeMarshaler
+	unmarshaler AttributeUnmarshaler
+}
+
+func NewDynamoDBService(client DynamoDBOperations, marshaler AttributeMarshaler, unmarshaler AttributeUnmarshaler) *DynamoDBService {
 	return &DynamoDBService{
-		Client: client,
+		client:      client,
+		marshaler:   marshaler,
+		unmarshaler: unmarshaler,
 	}
 }
 
-func (d *DynamoDBService) GetItem(ctx context.Context, id string) (*Item, error) {
-	av, err := attributevalue.Marshal(id)
+type Item struct {
+	ID   string
+	Name string
+}
+
+func (s *DynamoDBService) GetItem(ctx context.Context, id string) (*Item, error) {
+	av, err := s.marshaler.Marshal(id)
 	if err != nil {
 		return nil, err
 	}
 
-	input := &dynamodb.GetItemInput{
+	params := &dynamodb.GetItemInput{
 		TableName: aws.String("MyTable"),
 		Key: map[string]types.AttributeValue{
 			"ID": av,
 		},
 	}
 
-	resp, err := d.Client.GetItem(ctx, input)
+	resp, err := s.client.GetItem(ctx, params)
 	if err != nil {
 		return nil, err
 	}
 
-	item := Item{}
-	err = attributevalue.UnmarshalMap(resp.Item, &item)
+	var item Item
+	err = s.unmarshaler.UnmarshalMap(resp.Item, &item)
 	if err != nil {
 		return nil, err
 	}
