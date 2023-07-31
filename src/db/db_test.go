@@ -20,24 +20,26 @@ func (m *mockDynamoDBClient) GetItem(ctx context.Context, params *dynamodb.GetIt
 
 func TestGetItem(t *testing.T) {
 	ctx := context.TODO()
-	id := "testID"
+	testId := "testID"
+	testName := "testName"
 
 	// Success case
 	mockClient := &mockDynamoDBClient{
 		GetItemFunc: func(ctx context.Context, params *dynamodb.GetItemInput, optFns ...func(*dynamodb.Options)) (*dynamodb.GetItemOutput, error) {
 			item := map[string]types.AttributeValue{
-				"ID":   &types.AttributeValueMemberS{Value: "testID"},
-				"Name": &types.AttributeValueMemberS{Value: "testName"},
+				"ID":   &types.AttributeValueMemberS{Value: testId},
+				"Name": &types.AttributeValueMemberS{Value: testName},
 			}
 			return &dynamodb.GetItemOutput{Item: item}, nil
 		},
 	}
 
 	service := NewDynamoDBService(mockClient)
-	item, err := service.GetItem(ctx, id)
+	item, err := service.GetItem(ctx, testId)
 
 	assert.NoError(t, err)
-	assert.Equal(t, id, item.ID)
+	assert.Equal(t, testId, item.ID)
+	assert.Equal(t, testName, item.Name)
 
 	// Error case
 	mockClient = &mockDynamoDBClient{
@@ -47,7 +49,7 @@ func TestGetItem(t *testing.T) {
 	}
 
 	service = NewDynamoDBService(mockClient)
-	_, err = service.GetItem(ctx, id)
+	_, err = service.GetItem(ctx, testId)
 
 	assert.Error(t, err)
 }
